@@ -3,9 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Almacenar Textos - Blockchain</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #EDE7F6;
+            color: #121212;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            background-color: #FFFFFF;
+            border-radius: 1rem;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            width: 100%;
+            background-color: #6750A4;
+            padding: 1rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            text-align: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .wallet-box {
+            background-color: #6750A4;
+            color: #FFFFFF;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            word-wrap: break-word;
+            width: 100%;
+        }
+        .input {
+            width: 100%;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 0.5rem;
+            background-color: #F5F5F5;
+            border: none;
+            color: #121212;
+        }
+        .input::placeholder {
+            color: #6750A4;
+        }
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 0.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .btn-primary {
+            background-color: #6750A4; /* Morado M3 */
+            color: #ffffff;
+        }
+        .btn-secondary {
+            background-color: #121212; /* Negro M3 */
+            color: #ffffff;
+        }
+        .info-box {
+            background-color: #F5F5F5;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            width: 100%;
+        }
+        /* Mejoras Responsivas */
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            .header {
+                font-size: 1.25rem;
+            }
+            .input {
+                padding: 0.5rem;
+            }
+            .btn {
+                padding: 0.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="header">Almacenar Textos</div>
+
+    <div class="container" style="padding-top: 5rem;">
+        <button id="connectButton" class="btn btn-primary">Conectar Wallet</button>
+
+        <div id="walletInfo" class="wallet-box hidden">
+            <p>Billetera conectada:</p>
+            <p id="walletAddress" class="text-xs"></p>
+        </div>
+
+        <div id="textInfo" class="info-box hidden">
+            <p>Texto Almacenado:</p>
+            <p id="storedText" class="text-sm">N/A</p>
+            <button id="refreshTextButton" class="btn btn-secondary mt-4">Consultar Texto</button>
+        </div>
+
+        <div id="textForm" class="info-box hidden">
+            <textarea id="newText" class="input" placeholder="Escribe un nuevo texto aquí..."></textarea>
+            <button id="saveTextButton" class="btn btn-secondary">Guardar Texto</button>
+        </div>
+        
+        <p id="status" class="mt-4 text-sm"></p>
+    </div>
     
+    <script>
+        const contractAddress = 0xf8e81D47203A594245E36C48e151709F0C19fBe8; // Reemplazar con la dirección del contrato desplegado
+        const abi = [
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "nuevoTexto",
+				"type": "string"
+			}
+		],
+		"name": "almacenarTexto",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "consultarTexto",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "propietario",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+        
+        let provider;
+        let signer;
+        let contract;
+
+        document.getElementById('connectButton').onclick = async function() {
+            if (window.ethereum) {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                contract = new ethers.Contract(contractAddress, abi, signer);
+                
+                const walletAddress = await signer.getAddress();
+                document.getElementById('walletAddress').innerText = walletAddress;
+                document.getElementById('walletInfo').classList.remove('hidden');
+                document.getElementById('textInfo').classList.remove('hidden');
+                document.getElementById('textForm').classList.remove('hidden');
+                document.getElementById('status').innerText = "Wallet conectada";
+
+                updateStoredText();
+            } else {
+                document.getElementById('status').innerText = "Por favor instala MetaMask";
+            }
+        };
+
+        async function updateStoredText() {
+            const storedText = await contract.consultarTexto();
+            document.getElementById('storedText').innerText = storedText || "N/A";
+        }
+
+        document.getElementById('saveTextButton').onclick = async function() {
+            const newText = document.getElementById('newText').value;
+            if (!newText) {
+                document.getElementById('status').innerText = "Por favor, escribe un texto.";
+                return;
+            }
+            const tx = await contract.almacenarTexto(newText);
+            document.getElementById('status').innerText = "Guardando texto...";
+            await tx.wait();
+            document.getElementById('status').innerText = "Texto guardado con éxito!";
+            updateStoredText();
+            document.getElementById('newText').value = "";
+        };
+
+        document.getElementById('refreshTextButton').onclick = async function() {
+            updateStoredText();
+            document.getElementById('status').innerText = "Texto actualizado!";
+        };
+    </script>
 </body>
 </html>
