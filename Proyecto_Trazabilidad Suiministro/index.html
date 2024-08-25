@@ -1,11 +1,291 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interfaz de Trazabilidad de Productos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f5f5;
+    }
+    .primary-bg {
+      background-color: #673AB7;
+    }
+    .secondary-bg {
+      background-color: #757575;
+    }
+    .text-primary {
+      color: #673AB7;
+    }
+    .text-secondary {
+      color: #757575;
+    }
+    .text-white {
+      color: #ffffff;
+    }
+  </style>
 </head>
-<body>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+  
+  <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-primary mb-6 text-center">Trazabilidad de Productos</h1>
     
+    <!-- Sección de conexión de MetaMask -->
+    <div class="mb-6">
+      <button id="conectarBtn" class="primary-bg text-white py-2 px-4 rounded-lg w-full">
+        Conectar con MetaMask
+      </button>
+      <p id="accountSpan" class="text-secondary mt-2 text-center"></p>
+      <p id="statusMessage" class="text-secondary mt-2 text-center"></p> <!-- Mensaje de estado -->
+    </div>
+    
+    <!-- Registrar Producto -->
+    <div class="mb-4">
+      <label for="nombre
+    
+      Producto" class="block text-secondary font-medium mb-2">Registrar Producto</label>
+      <input type="text" id="nombreProducto" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nombre del Producto">
+      <button id="registrarProductoBtn" class="primary-bg text-white py-2 px-4 rounded-lg w-full mt-4">
+        Registrar Producto
+      </button>
+    </div>
+
+    <!-- Actualizar Estado -->
+    <div class="mb-4">
+      <label for="idProducto" class="block text-secondary font-medium mb-2">Actualizar Estado del Producto</label>
+      <input type="number" id="idProducto" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="ID del Producto">
+      <input type="text" id="ubicacionProducto" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mt-2" placeholder="Nueva Ubicación">
+      <button id="actualizarEstadoBtn" class="primary-bg text-white py-2 px-4 rounded-lg w-full mt-4">
+        Actualizar Estado
+      </button>
+    </div>
+
+    <!-- Obtener Historial -->
+    <div class="mb-4">
+      <label for="idHistorial" class="block text-secondary font-medium mb-2">Obtener Historial del Producto</label>
+      <input type="number" id="idHistorial" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="ID del Producto">
+      <button id="obtenerHistorialBtn" class="secondary-bg text-white py-2 px-4 rounded-lg w-full mt-4">
+        Obtener Historial
+      </button>
+      <div id="historialProducto" class="mt-4 text-secondary"></div> <!-- Mostrar historial -->
+    </div>
+
+    <!-- Obtener Lista de Productos -->
+    <div class="mb-4">
+      <button id="obtenerListaProductosBtn" class="secondary-bg text-white py-2 px-4 rounded-lg w-full">
+        Obtener Lista de Productos
+      </button>
+      <div id="listaProductos" class="mt-4 text-secondary"></div> <!-- Mostrar lista de productos -->
+    </div>
+
+  </div>
+
+  <script>
+    let provider;
+    let signer;
+    let contract;
+
+    // Espacio para el contrato y ABI
+    const contractAddress = 0x2B5F20d96beF51Fc291ddf2D9Fd7302198AA5e90; 
+    const contractABI = [
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_idProducto",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "_ubicacion",
+				"type": "string"
+			}
+		],
+		"name": "actualizarEstado",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_nombre",
+				"type": "string"
+			}
+		],
+		"name": "registrarProducto",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "contadorProductos",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_idProducto",
+				"type": "uint256"
+			}
+		],
+		"name": "obtenerHistorial",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "string",
+						"name": "ubicacion",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "marcaTiempo",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct TrazabilidadSimple.Estado[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "obtenerListaProductos",
+		"outputs": [
+			{
+				"internalType": "string[]",
+				"name": "",
+				"type": "string[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "productos",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "nombre",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+
+    document.getElementById('conectarBtn').addEventListener('click', async () => {
+      const statusMessage = document.getElementById('statusMessage');
+      statusMessage.textContent = ''; // Limpiar mensaje de estado previo
+
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          await ethereum.request({ method: 'eth_requestAccounts' });
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          const account = await signer.getAddress();
+          document.getElementById('accountSpan').innerText = `Conectado: ${account}`;
+          contract = new ethers.Contract(contractAddress, contractABI, signer);
+          statusMessage.textContent = '¡Conexión exitosa con MetaMask!';
+          statusMessage.style.color = 'green';
+        } catch (error) {
+          console.error("Error al conectar MetaMask", error);
+          statusMessage.textContent = 'Error al conectar MetaMask.';
+          statusMessage.style.color = 'red';
+        }
+      } else {
+        alert('MetaMask no está instalado.');
+        statusMessage.textContent = 'MetaMask no está instalado.';
+        statusMessage.style.color = 'red';
+      }
+    });
+
+    document.getElementById('registrarProductoBtn').addEventListener('click', async () => {
+      const nombreProducto = document.getElementById('nombreProducto').value;
+      if (contract && nombreProducto) {
+        try {
+          const tx = await contract.registrarProducto(nombreProducto);
+          await tx.wait();
+          alert('Producto registrado exitosamente');
+        } catch (error) {
+          console.error("Error al registrar producto", error);
+        }
+      } else {
+        alert('Conecte MetaMask e ingrese el nombre del producto.');
+      }
+    });
+
+    document.getElementById('actualizarEstadoBtn').addEventListener('click', async () => {
+      const idProducto = document.getElementById('idProducto').value;
+      const ubicacionProducto = document.getElementById('ubicacionProducto').value;
+      if (contract && idProducto && ubicacionProducto) {
+        try {
+          const tx = await contract.actualizarEstado(idProducto, ubicacionProducto);
+          await tx.wait();
+          alert('Estado del producto actualizado exitosamente');
+        } catch (error) {
+          console.error("Error al actualizar estado", error);
+        }
+      } else {
+        alert('Conecte MetaMask, ingrese el ID del producto y la nueva ubicación.');
+      }
+    });
+
+    document.getElementById('obtenerHistorialBtn').addEventListener('click', async () => {
+      const idHistorial = document.getElementById('idHistorial').value;
+      if (contract && idHistorial) {
+        try {
+          const historial = await contract.obtenerHistorial(idHistorial);
+          document.getElementById('historialProducto').innerHTML = historial.map(e => `<p>Ubicación: ${e.ubicacion} - Marca de tiempo: ${new Date(e.marcaTiempo * 1000).toLocaleString()}</p>`).join('');
+        } catch (error) {
+          console.error("Error al obtener historial", error);
+        }
+      } else {
+        alert('Conecte MetaMask e ingrese el ID del producto.');
+      }
+    });
+
+    document.getElementById('obtenerListaProductosBtn').addEventListener('click', async () => {
+      if (contract) {
+        try {
+          const lista = await contract.obtenerListaProductos();
+          document.getElementById('listaProductos').innerHTML = lista.map((nombre, index) => `<p>ID: ${index + 1} - Nombre: ${nombre}</p>`).join('');
+        } catch (error) {
+          console.error("Error al obtener lista de productos", error);
+        }
+      } else {
+        alert('Conecte MetaMask primero.');
+      }
+    });
+
+  </script>
 </body>
 </html>
+  

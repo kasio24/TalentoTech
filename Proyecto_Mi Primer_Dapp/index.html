@@ -3,11 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interfaz de Captura y Consulta de Texto en Blockchain</title>
+  <title>Almacenar Texto Daap</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Asegúrate de que ethers.js se cargue correctamente -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.0.0/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
   <style>
     body {
       font-family: 'Roboto', sans-serif;
@@ -33,135 +32,121 @@
 <body class="flex flex-col items-center justify-center min-h-screen p-4">
   
   <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-    <h1 class="text-2xl font-bold text-primary mb-6 text-center">Blockchain Text Manager</h1>
+    <h1 class="text-2xl font-bold text-primary mb-6 text-center">Almacenar Texto Daap</h1>
     
     <!-- Sección de conexión de MetaMask -->
     <div class="mb-6">
-      <button id="connectButton" class="primary-bg text-white py-2 px-4 rounded-lg w-full">
-        Conectar MetaMask
+      <button id="conectarBtn" class="primary-bg text-white py-2 px-4 rounded-lg w-full">
+        Conectar con MetaMask
       </button>
-      <p id="walletAddress" class="text-secondary mt-2 text-center"></p>
+      <p id="accountSpan" class="text-secondary mt-2 text-center"></p>
+      <p id="statusMessage" class="text-secondary mt-2 text-center"></p> <!-- Mensaje de estado -->
     </div>
     
     <!-- Campo de texto para ingresar -->
     <div class="mb-4">
-      <label for="inputText" class="block text-secondary font-medium mb-2">Ingresar Texto</label>
-      <input type="text" id="inputText" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+      <label for="textoInput" class="block text-secondary font-medium mb-2">Ingrese el texto que desea almacenar</label>
+      <input type="text" id="textoInput" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Ingrese el texto que desea almacenar">
     </div>
     
-    <!-- Botón para enviar texto a la blockchain -->
-    <button id="saveButton" class="primary-bg text-white py-2 px-4 rounded-lg w-full mb-4">
-      Guardar en Blockchain
+    <!-- Botón para almacenar texto en la blockchain -->
+    <button id="almacenarBtn" class="primary-bg text-white py-2 px-4 rounded-lg w-full mb-4">
+      Almacenar Texto
     </button>
-    
-    <!-- Campo de texto para mostrar la consulta -->
-    <div class="mb-4">
-      <label for="outputText" class="block text-secondary font-medium mb-2">Texto Guardado</label>
-      <p id="outputText" class="w-full px-4 py-2 border rounded-lg bg-gray-100"></p>
-    </div>
     
     <!-- Botón para consultar el texto desde la blockchain -->
-    <button id="consultButton" class="secondary-bg text-white py-2 px-4 rounded-lg w-full">
+    <button id="consultarBtn" class="secondary-bg text-white py-2 px-4 rounded-lg w-full">
       Consultar Texto
     </button>
+    
+    <!-- Sección para mostrar la confirmación y el texto almacenado -->
+    <div id="confirmacion" class="mt-4 text-center text-secondary"></div>
+    <div id="textoAlmacenado" class="mt-2 text-center text-secondary"></div>
+    <div id="hashTransaccsion" class="mt-2 text-center text-secondary"></div>
+
   </div>
-  
+
   <script>
     let provider;
     let signer;
     let contract;
 
-    const contractAddress = "0xYourContractAddress"; // Reemplaza con tu dirección de contrato
-    const contractABI = [
-        {
-            "inputs": [],
-            "stateMutability": "nonpayable",
-            "type": "constructor"
-        },
-        {
-            "inputs": [],
-            "name": "consultarTexto",
-            "outputs": [
-                {
-                    "internalType": "string",
-                    "name": "",
-                    "type": "string"
-                }
-            ],
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "inputs": [
-                {
-                    "internalType": "string",
-                    "name": "nuevoTexto",
-                    "type": "string"
-                }
-            ],
-            "name": "almacenarTexto",
-            "outputs": [],
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "inputs": [],
-            "name": "propietario",
-            "outputs": [
-                {
-                    "internalType": "address",
-                    "name": "",
-                    "type": "address"
-                }
-            ],
-            "stateMutability": "view",
-            "type": "function"
-        }
-    ];
+    // Dirección del contrato y ABI (debes sustituir la dirección del contrato y el ABI con los correctos)
+    const contractAddress = 0x523C7914B97a109b8DDDFF270ecf43d7E75c7Cc9; 
+    const contractABI =[
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "nuevoTexto",
+				"type": "string"
+			}
+		],
+		"name": "almacenarTexto",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "consultarTexto",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "propietario",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
 
-    document.getElementById('connectButton').addEventListener('click', async () => {
+    document.getElementById('conectarBtn').addEventListener('click', async () => {
+      const statusMessage = document.getElementById('statusMessage');
+      statusMessage.textContent = ''; // Limpiar mensaje de estado previo
+
       if (typeof window.ethereum !== 'undefined') {
         try {
           await ethereum.request({ method: 'eth_requestAccounts' });
           provider = new ethers.providers.Web3Provider(window.ethereum);
           signer = provider.getSigner();
-          document.getElementById('walletAddress').innerText = `Conectado: ${await signer.getAddress()}`;
+          const account = await signer.getAddress();
+          document.getElementById('accountSpan').innerText = `Conectado: ${account}`;
           contract = new ethers.Contract(contractAddress, contractABI, signer);
+          statusMessage.textContent = '¡Conexión exitosa con MetaMask!';
+          statusMessage.style.color = 'green';
         } catch (error) {
           console.error("Error al conectar MetaMask", error);
+          statusMessage.textContent = 'Error al conectar MetaMask.';
+          statusMessage.style.color = 'red';
         }
       } else {
         alert('MetaMask no está instalado.');
+        statusMessage.textContent = 'MetaMask no está instalado.';
+        statusMessage.style.color = 'red';
       }
     });
 
-    document.getElementById('saveButton').addEventListener('click', async () => {
-      const text = document.getElementById('inputText').value;
-      if (contract && text) {
-        try {
-          const tx = await contract.almacenarTexto(text);
-          await tx.wait();
-          alert('Texto guardado en la blockchain');
-        } catch (error) {
-          console.error("Error al guardar texto", error);
-        }
-      } else {
-        alert('Conecte MetaMask e ingrese texto.');
-      }
-    });
-
-    document.getElementById('consultButton').addEventListener('click', async () => {
-      if (contract) {
-        try {
-          const storedText = await contract.consultarTexto();
-          document.getElementById('outputText').innerText = storedText;
-        } catch (error) {
-          console.error("Error al consultar texto", error);
-        }
-      } else {
-        alert('Conecte MetaMask primero.');
-      }
-    });
+    // Otros eventos de botones como almacenarBtn y consultarBtn...
   </script>
 </body>
 </html>
