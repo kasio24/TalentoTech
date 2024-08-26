@@ -1,11 +1,221 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestor de Usuarios con Permisos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f5f5;
+    }
+    .primary-bg {
+      background-color: #673AB7;
+    }
+    .secondary-bg {
+      background-color: #757575;
+    }
+    .text-primary {
+      color: #673AB7;
+    }
+    .text-secondary {
+      color: #757575;
+    }
+    .text-white {
+      color: #ffffff;
+    }
+  </style>
 </head>
-<body>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+  
+  <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-primary mb-6 text-center">Gestor de Usuarios</h1>
     
+    <!-- Sección de conexión de MetaMask -->
+    <div class="mb-6">
+      <button id="conectarBtn" class="primary-bg text-white py-2 px-4 rounded-lg w-full">
+        Conectar con MetaMask
+      </button>
+      <p id="accountSpan" class="text-secondary mt-2 text-center"></p>
+      <p id="statusMessage" class="text-secondary mt-2 text-center"></p> <!-- Mensaje de estado -->
+    </div>
+    
+    <!-- Registrar Usuario -->
+    <div class="mb-4">
+      <label for="usuarioAddress" class="block text-secondary font-medium mb-2">Registrar Usuario</label>
+      <input type="text" id="usuarioAddress" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Dirección del Usuario">
+      <input type="text" id="nombreUsuario" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mt-2" placeholder="Nombre del Usuario">
+      <button id="registrarUsuarioBtn" class="primary-bg text-white py-2 px-4 rounded-lg w-full mt-4">
+        Registrar Usuario
+      </button>
+    </div>
+
+    <!-- Eliminar Usuario -->
+    <div class="mb-4">
+      <label for="eliminarUsuarioAddress" class="block text-secondary font-medium mb-2">Eliminar Usuario</label>
+      <input type="text" id="eliminarUsuarioAddress" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Dirección del Usuario">
+      <button id="eliminarUsuarioBtn" class="secondary-bg text-white py-2 px-4 rounded-lg w-full mt-4">
+        Eliminar Usuario
+      </button>
+    </div>
+
+    <!-- Verificar si Usuario está Registrado -->
+    <div class="mb-4">
+      <label for="verificarUsuarioAddress" class="block text-secondary font-medium mb-2">Verificar Registro de Usuario</label>
+      <input type="text" id="verificarUsuarioAddress" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Dirección del Usuario">
+      <button id="verificarUsuarioBtn" class="secondary-bg text-white py-2 px-4 rounded-lg w-full mt-4">
+        Verificar Usuario
+      </button>
+      <div id="verificarResultado" class="mt-4 text-secondary"></div> <!-- Mostrar resultado de verificación -->
+    </div>
+
+    <!-- Obtener Nombre Registrado -->
+    <div class="mb-4">
+      <label for="obtenerNombreAddress" class="block text-secondary font-medium mb-2">Obtener Nombre Registrado</label>
+      <input type="text" id="obtenerNombreAddress" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Dirección del Usuario">
+      <button id="obtenerNombreBtn" class="secondary-bg text-white py-2 px-4 rounded-lg w-full mt-4">
+        Obtener Nombre
+      </button>
+      <div id="nombreRegistrado" class="mt-4 text-secondary"></div> <!-- Mostrar nombre registrado -->
+    </div>
+
+  </div>
+
+  <script>
+    let provider;
+    let signer;
+    let contract;
+
+    // Espacio para el contrato y ABI
+    const contractAddress = 0xba6b6e300E649fDfb0c969847e069192B59Bb244; 
+    const contractABI = [
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_dato",
+				"type": "string"
+			}
+		],
+		"name": "registrarDato",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_direccionGestorUsuarios",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "obtenerRegistros",
+		"outputs": [
+			{
+				"internalType": "string[]",
+				"name": "",
+				"type": "string[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+
+    document.getElementById('conectarBtn').addEventListener('click', async () => {
+      const statusMessage = document.getElementById('statusMessage');
+      statusMessage.textContent = ''; // Limpiar mensaje de estado previo
+
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          await ethereum.request({ method: 'eth_requestAccounts' });
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          const account = await signer.getAddress();
+          document.getElementById('accountSpan').innerText = `Conectado: ${account}`;
+          contract = new ethers.Contract(contractAddress, contractABI, signer);
+          statusMessage.textContent = '¡Conexión exitosa con MetaMask!';
+          statusMessage.style.color = 'green';
+        } catch (error) {
+          console.error("Error al conectar MetaMask", error);
+          statusMessage.textContent = 'Error al conectar MetaMask.';
+          statusMessage.style.color = 'red';
+        }
+      } else {
+        alert('MetaMask no está instalado.');
+        statusMessage.textContent = 'MetaMask no está instalado.';
+        statusMessage.style.color = 'red';
+      }
+    });
+
+    document.getElementById('registrarUsuarioBtn').addEventListener('click', async () => {
+      const usuarioAddress = document.getElementById('usuarioAddress').value;
+      const nombreUsuario = document.getElementById('nombreUsuario').value;
+      if (contract && usuarioAddress && nombreUsuario) {
+        try {
+          const tx = await contract.registrarUsuario(usuarioAddress, nombreUsuario);
+          await tx.wait();
+          alert('Usuario registrado exitosamente');
+        } catch (error) {
+          console.error("Error al registrar usuario", error);
+        }
+      } else {
+        alert('Conecte MetaMask e ingrese la dirección y nombre del usuario.');
+      }
+    });
+
+    document.getElementById('eliminarUsuarioBtn').addEventListener('click', async () => {
+      const eliminarUsuarioAddress = document.getElementById('eliminarUsuarioAddress').value;
+      if (contract && eliminarUsuarioAddress) {
+        try {
+          const tx = await contract.eliminuarUsuario(eliminarUsuarioAddress);
+          await tx.wait();
+          alert('Usuario eliminado exitosamente');
+        } catch (error) {
+          console.error("Error al eliminar usuario", error);
+        }
+      } else {
+        alert('Conecte MetaMask e ingrese la dirección del usuario.');
+      }
+    });
+
+    document.getElementById('verificarUsuarioBtn').addEventListener('click', async () => {
+      const verificarUsuarioAddress = document.getElementById('verificarUsuarioAddress').value;
+      if (contract && verificarUsuarioAddress) {
+        try {
+          const registrado = await contract.estaUsuarioRegistrado(verificarUsuarioAddress);
+          document.getElementById('verificarResultado').innerText = registrado ? "El usuario está registrado" : "El usuario no está registrado";
+        } catch (error) {
+          console.error("Error al verificar usuario", error);
+        }
+      } else {
+        alert('Conecte MetaMask e ingrese la dirección del usuario.');
+      }
+    });
+
+    document.getElementById('obtenerNombreBtn').addEventListener('click', async () => {
+      const obtenerNombreAddress = document.getElementById('obtenerNombreAddress').value;
+      if (contract && obtenerNombreAddress) {
+        try {
+          const nombre = await contract.obtenerNombreRegistrado(obtenerNombreAddress);
+          document.getElementById('nombreRegistrado').innerText = nombre ? `Nombre registrado: ${nombre}` : "El usuario no está registrado";
+        } catch (error) {
+          console.error("Error al obtener nombre registrado", error);
+        }
+      } else {
+        alert('Conecte MetaMask e ingrese la dirección del usuario.');
+      }
+    });
+
+  </script>
 </body>
 </html>
