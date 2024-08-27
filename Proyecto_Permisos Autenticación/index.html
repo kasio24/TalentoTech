@@ -93,14 +93,32 @@
     const contractAddress = 0xba6b6e300E649fDfb0c969847e069192B59Bb244; 
     const contractABI = [
 	{
-		"inputs": [
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "administrador",
+		"outputs": [
 			{
-				"internalType": "string",
-				"name": "_dato",
-				"type": "string"
+				"internalType": "address",
+				"name": "",
+				"type": "address"
 			}
 		],
-		"name": "registrarDato",
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_usuario",
+				"type": "address"
+			}
+		],
+		"name": "eliminuarUsuario",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -109,24 +127,56 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_direccionGestorUsuarios",
+				"name": "_usuario",
 				"type": "address"
 			}
 		],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"inputs": [],
-		"name": "obtenerRegistros",
+		"name": "estaUsuarioRegistrado",
 		"outputs": [
 			{
-				"internalType": "string[]",
+				"internalType": "bool",
 				"name": "",
-				"type": "string[]"
+				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_usuario",
+				"type": "address"
+			}
+		],
+		"name": "obtenerNombreRegistrado",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_usuario",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "_nombre",
+				"type": "string"
+			}
+		],
+		"name": "registrarUsuario",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ];

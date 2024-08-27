@@ -13,7 +13,7 @@ contract RegistroDatos {
     }
 
     // FUNCION: Para registrar los datos
-    function registrarDato (string memory _dato) public {
+    function registrarDato (string memory _dato) public payable {
         require(gestorUsuarios.estaUsuarioRegistrado(msg.sender), "Debes estar registrado para registrar datos");
         registrosUsuario[msg.sender].push(_dato);
     }

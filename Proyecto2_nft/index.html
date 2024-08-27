@@ -1,11 +1,779 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interacción con Colección NFT</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f5f5;
+    }
+    .primary-bg {
+      background-color: #673AB7;
+    }
+    .secondary-bg {
+      background-color: #757575;
+    }
+    .text-primary {
+      color: #673AB7;
+    }
+    .text-secondary {
+      color: #757575;
+    }
+    .text-white {
+      color: #ffffff;
+    }
+  </style>
 </head>
-<body>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+  
+  <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-primary mb-6 text-center">Colección de NFTs</h1>
     
+    <!-- Conectar a MetaMask -->
+    <div class="mb-6">
+      <button id="conectarBtn" class="primary-bg text-white py-2 px-4 rounded-lg w-full">
+        Conectar con MetaMask
+      </button>
+      <p id="accountSpan" class="text-secondary mt-2 text-center"></p>
+      <p id="statusMessage" class="text-secondary mt-2 text-center"></p>
+    </div>
+    
+    <!-- Crear NFT -->
+    <div class="mb-4">
+      <label for="destinatario" class="block text-secondary font-medium mb-2">Crear NFT</label>
+      <input type="text" id="destinatario" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Dirección del destinatario">
+      <input type="text" id="uriNFT" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mt-2" placeholder="URI del NFT">
+      <button id="crearNFTBtn" class="primary-bg text-white py-2 px-4 rounded-lg w-full mt-4">
+        Crear NFT
+      </button>
+    </div>
+
+    <!-- Ver listado de NFTs -->
+    <div class="mb-4">
+      <button id="listarNFTsBtn" class="secondary-bg text-white py-2 px-4 rounded-lg w-full">
+        Ver mis NFTs
+      </button>
+      <div id="listaNFTs" class="mt-4 text-secondary"></div>
+    </div>
+
+    <!-- Transferir NFT -->
+    <div class="mb-4">
+      <label for="idNFT" class="block text-secondary font-medium mb-2">Transferir NFT</label>
+      <input type="number" id="idNFT" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="ID del NFT">
+      <input type="text" id="nuevoPropietario" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mt-2" placeholder="Dirección del nuevo propietario">
+      <button id="transferirNFTBtn" class="secondary-bg text-white py-2 px-4 rounded-lg w-full mt-4">
+        Transferir NFT
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    let provider;
+    let signer;
+    let contract;
+
+    const contractAddress = 0x8BEe49dB3E39AD678D535914340F4688AF4A33ff; // Coloca aquí la dirección de tu contrato
+    const contractABI = [
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "approve",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "destinatario",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "uri",
+				"type": "string"
+			}
+		],
+		"name": "crearNFT",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "nombreColeccion",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "simboloColeccion",
+				"type": "string"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "ERC721IncorrectOwner",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "ERC721InsufficientApproval",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "approver",
+				"type": "address"
+			}
+		],
+		"name": "ERC721InvalidApprover",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			}
+		],
+		"name": "ERC721InvalidOperator",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "ERC721InvalidOwner",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "receiver",
+				"type": "address"
+			}
+		],
+		"name": "ERC721InvalidReceiver",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			}
+		],
+		"name": "ERC721InvalidSender",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "ERC721NonexistentToken",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "OwnableInvalidOwner",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "OwnableUnauthorizedAccount",
+		"type": "error"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "approved",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "Approval",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "approved",
+				"type": "bool"
+			}
+		],
+		"name": "ApprovalForAll",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "_fromTokenId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "_toTokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "BatchMetadataUpdate",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "MetadataUpdate",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "previousOwner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "safeTransferFrom",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes",
+				"name": "data",
+				"type": "bytes"
+			}
+		],
+		"name": "safeTransferFrom",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			},
+			{
+				"internalType": "bool",
+				"name": "approved",
+				"type": "bool"
+			}
+		],
+		"name": "setApprovalForAll",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "Transfer",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "transferFrom",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "balanceOf",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "getApproved",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "usuario",
+				"type": "address"
+			}
+		],
+		"name": "getNTFsusuario",
+		"outputs": [
+			{
+				"internalType": "uint256[]",
+				"name": "",
+				"type": "uint256[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			}
+		],
+		"name": "isApprovedForAll",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "name",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "ownerOf",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes4",
+				"name": "interfaceId",
+				"type": "bytes4"
+			}
+		],
+		"name": "supportsInterface",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "symbol",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "tokenURI",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+
+    // Conectar a MetaMask
+    document.getElementById('conectarBtn').addEventListener('click', async () => {
+      const statusMessage = document.getElementById('statusMessage');
+      statusMessage.textContent = ''; // Limpiar mensaje de estado previo
+
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          await ethereum.request({ method: 'eth_requestAccounts' });
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          const account = await signer.getAddress();
+          document.getElementById('accountSpan').innerText = `Conectado: ${account}`;
+          contract = new ethers.Contract(contractAddress, contractABI, signer);
+          statusMessage.textContent = '¡Conexión exitosa con MetaMask!';
+          statusMessage.style.color = 'green';
+        } catch (error) {
+          console.error("Error al conectar MetaMask", error);
+          statusMessage.textContent = 'Error al conectar MetaMask. Verifica tu conexión.';
+          statusMessage.style.color = 'red';
+        }
+      } else {
+        alert('MetaMask no está instalado.');
+        statusMessage.textContent = 'MetaMask no está instalado.';
+        statusMessage.style.color = 'red';
+      }
+    });
+
+    // Crear NFT
+    document.getElementById('crearNFTBtn').addEventListener('click', async () => {
+      const destinatario = document.getElementById('destinatario').value;
+      const uriNFT = document.getElementById('uriNFT').value;
+      const statusMessage = document.getElementById('statusMessage');
+      
+      if (contract && destinatario && uriNFT) {
+        try {
+          const tx = await contract.crearNFT(destinatario, uriNFT);
+          await tx.wait();
+          statusMessage.textContent = 'NFT creado exitosamente.';
+          statusMessage.style.color = 'green';
+        } catch (error) {
+          console.error("Error al crear NFT", error);
+          statusMessage.textContent = 'Error al crear NFT. Verifica los detalles e intenta nuevamente.';
+          statusMessage.style.color = 'red';
+        }
+      } else {
+        alert('Conecte MetaMask e ingrese la dirección del destinatario y la URI del NFT.');
+      }
+    });
+
+    // Listar NFTs del usuario
+    document.getElementById('listarNFTsBtn').addEventListener('click', async () => {
+      const statusMessage = document.getElementById('statusMessage');
+      
+      if (contract) {
+        try {
+          const cuenta = await signer.getAddress();
+          const nfts = await contract.getNTFsusuario(cuenta);
+          document.getElementById('listaNFTs').innerHTML = nfts.length > 0 
+            ? nfts.map((nftId) => `<p>ID del NFT: ${nftId}</p>`).join('')
+            : "No tienes NFTs en esta dirección.";
+          statusMessage.textContent = 'NFTs cargados correctamente.';
+          statusMessage.style.color = 'green';
+        } catch (error) {
+          console.error("Error al obtener NFTs", error);
+          statusMessage.textContent = 'Error al obtener NFTs. Intenta nuevamente.';
+          statusMessage.style.color = 'red';
+        }
+      } else {
+        alert('Conecte MetaMask primero.');
+      }
+    });
+
+    // Transferir NFT
+    document.getElementById('transferirNFTBtn').addEventListener('click', async () => {
+      const idNFT = document.getElementById('idNFT').value;
+      const nuevoPropietario = document.getElementById('nuevoPropietario').value;
+      const statusMessage = document.getElementById('statusMessage');
+      
+      if (contract && idNFT && nuevoPropietario) {
+        try {
+          const tx = await contract['safeTransferFrom(address,address,uint256)'](await signer.getAddress(), nuevoPropietario, idNFT);
+          await tx.wait();
+          statusMessage.textContent = 'NFT transferido exitosamente.';
+          statusMessage.style.color = 'green';
+        } catch (error) {
+          console.error("Error al transferir NFT", error);
+          statusMessage.textContent = 'Error al transferir NFT. Verifica los detalles e intenta nuevamente.';
+          statusMessage.style.color = 'red';
+        }
+      } else {
+        alert('Conecte MetaMask, ingrese el ID del NFT y la dirección del nuevo propietario.');
+      }
+    });
+
+  </script>
 </body>
 </html>

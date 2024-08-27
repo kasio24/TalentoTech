@@ -28,7 +28,7 @@ contract GestorUsuarios {
     }
 
     //FUNCIÓN: Eliminar un usuario
-    function eliminuarUsuario (address _usuario) public soloAdministrador {
+    function eliminuarUsuario (address _usuario) public payable soloAdministrador {
         require(usuarios[_usuario].registrado, "El usuario no esta registrado");
         delete usuarios[_usuario];
     }
