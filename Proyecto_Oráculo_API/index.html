@@ -1,11 +1,401 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interacción con Chainlink Functions</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f5f5;
+    }
+    .primary-bg {
+      background-color: #673AB7;
+    }
+    .secondary-bg {
+      background-color: #757575;
+    }
+    .text-primary {
+      color: #673AB7;
+    }
+    .text-secondary {
+      color: #757575;
+    }
+    .text-white {
+      color: #ffffff;
+    }
+  </style>
 </head>
-<body>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+  
+  <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-primary mb-6 text-center">Chainlink Functions</h1>
     
+    <!-- Conectar a MetaMask -->
+    <div class="mb-6">
+      <button id="conectarBtn" class="primary-bg text-white py-2 px-4 rounded-lg w-full">
+        Conectar con MetaMask
+      </button>
+      <p id="accountSpan" class="text-secondary mt-2 text-center"></p>
+      <p id="statusMessage" class="text-secondary mt-2 text-center"></p>
+    </div>
+    
+    <!-- Enviar Solicitud -->
+    <div class="mb-4">
+      <label for="subscriptionId" class="block text-secondary font-medium mb-2">ID de la Suscripción</label>
+      <input type="text" id="subscriptionId" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Ingresa el ID de la suscripción">
+
+      <label for="characterId" class="block text-secondary font-medium mt-4 mb-2">ID del Personaje</label>
+      <input type="text" id="characterId" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Ingresa el ID del personaje">
+
+      <button id="enviarSolicitudBtn" class="primary-bg text-white py-2 px-4 rounded-lg w-full mt-4">
+        Enviar Solicitud
+      </button>
+    </div>
+
+    <!-- Ver Respuesta -->
+    <div class="mb-4">
+      <h2 class="text-xl font-bold text-primary mb-2">Resultado</h2>
+      <p id="respuesta" class="text-secondary"></p>
+      <p id="error" class="text-red-500"></p>
+    </div>
+
+  </div>
+
+  <script>
+    let provider;
+    let signer;
+    let contract;
+
+    const contractAddress = 0x71285abF1BEDb145440831C5FfDCba0102121Dc2; // Coloca aquí la dirección de tu contrato desplegado
+    const contractABI = [
+	{
+		"inputs": [],
+		"name": "acceptOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "EmptyArgs",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "EmptySource",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "requestId",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "bytes",
+				"name": "response",
+				"type": "bytes"
+			},
+			{
+				"internalType": "bytes",
+				"name": "err",
+				"type": "bytes"
+			}
+		],
+		"name": "handleOracleFulfillment",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "NoInlineSecrets",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "OnlyRouterCanFulfill",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "requestId",
+				"type": "bytes32"
+			}
+		],
+		"name": "UnexpectedRequestID",
+		"type": "error"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferRequested",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "id",
+				"type": "bytes32"
+			}
+		],
+		"name": "RequestFulfilled",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "id",
+				"type": "bytes32"
+			}
+		],
+		"name": "RequestSent",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "requestId",
+				"type": "bytes32"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "character",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "bytes",
+				"name": "response",
+				"type": "bytes"
+			},
+			{
+				"indexed": false,
+				"internalType": "bytes",
+				"name": "err",
+				"type": "bytes"
+			}
+		],
+		"name": "Response",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint64",
+				"name": "subscriptionId",
+				"type": "uint64"
+			},
+			{
+				"internalType": "string[]",
+				"name": "args",
+				"type": "string[]"
+			}
+		],
+		"name": "sendRequest",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "requestId",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "character",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "s_lastError",
+		"outputs": [
+			{
+				"internalType": "bytes",
+				"name": "",
+				"type": "bytes"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "s_lastRequestId",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "s_lastResponse",
+		"outputs": [
+			{
+				"internalType": "bytes",
+				"name": "",
+				"type": "bytes"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+
+    // Conectar a MetaMask
+    document.getElementById('conectarBtn').addEventListener('click', async () => {
+      const statusMessage = document.getElementById('statusMessage');
+      statusMessage.textContent = ''; // Limpiar mensaje de estado previo
+
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          await ethereum.request({ method: 'eth_requestAccounts' });
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          const account = await signer.getAddress();
+          document.getElementById('accountSpan').innerText = `Conectado: ${account}`;
+          contract = new ethers.Contract(contractAddress, contractABI, signer);
+          statusMessage.textContent = '¡Conexión exitosa con MetaMask!';
+          statusMessage.style.color = 'green';
+        } catch (error) {
+          console.error("Error al conectar MetaMask", error);
+          statusMessage.textContent = 'Error al conectar MetaMask. Verifica tu conexión.';
+          statusMessage.style.color = 'red';
+        }
+      } else {
+        alert('MetaMask no está instalado.');
+        statusMessage.textContent = 'MetaMask no está instalado.';
+        statusMessage.style.color = 'red';
+      }
+    });
+
+    // Enviar Solicitud a Chainlink Functions
+    document.getElementById('enviarSolicitudBtn').addEventListener('click', async () => {
+      const subscriptionId = document.getElementById('subscriptionId').value;
+      const characterId = document.getElementById('characterId').value;
+      const statusMessage = document.getElementById('statusMessage');
+      const respuesta = document.getElementById('respuesta');
+      const error = document.getElementById('error');
+      
+      if (contract && subscriptionId && characterId) {
+        try {
+          const tx = await contract.sendRequest(subscriptionId, [characterId]);
+          await tx.wait();
+
+          // Obtener la respuesta del contrato
+          const character = await contract.character();
+          const lastError = await contract.s_lastError();
+
+          respuesta.innerText = `Nombre del Personaje: ${character}`;
+          error.innerText = lastError.length > 0 ? `Error: ${ethers.utils.toUtf8String(lastError)}` : '';
+
+          statusMessage.textContent = 'Solicitud enviada correctamente.';
+          statusMessage.style.color = 'green';
+        } catch (error) {
+          console.error("Error al enviar la solicitud", error);
+          statusMessage.textContent = `Error al enviar la solicitud: ${error.message}`;
+          statusMessage.style.color = 'red';
+        }
+      } else {
+        alert('Conecte MetaMask e ingrese los valores necesarios.');
+      }
+    });
+
+  </script>
 </body>
 </html>

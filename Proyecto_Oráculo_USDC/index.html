@@ -1,11 +1,171 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interacción con el Oráculo BTC/USD</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f5f5f5;
+    }
+    .primary-bg {
+      background-color: #673AB7;
+    }
+    .secondary-bg {
+      background-color: #757575;
+    }
+    .text-primary {
+      color: #673AB7;
+    }
+    .text-secondary {
+      color: #757575;
+    }
+    .text-white {
+      color: #ffffff;
+    }
+  </style>
 </head>
-<body>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+  
+  <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-primary mb-6 text-center">Precio BTC/USD</h1>
     
+    <!-- Conectar a MetaMask -->
+    <div class="mb-6">
+      <button id="conectarBtn" class="primary-bg text-white py-2 px-4 rounded-lg w-full">
+        Conectar con MetaMask
+      </button>
+      <p id="accountSpan" class="text-secondary mt-2 text-center"></p>
+      <p id="statusMessage" class="text-secondary mt-2 text-center"></p>
+    </div>
+    
+    <!-- Obtener Precio de BTC/USD -->
+    <div class="mb-4">
+      <button id="obtenerPrecioBtn" class="secondary-bg text-white py-2 px-4 rounded-lg w-full">
+        Obtener Precio BTC/USD
+      </button>
+      <div id="precioBTC" class="mt-4 text-secondary"></div>
+    </div>
+
+    <!-- Obtener Timestamp -->
+    <div class="mb-4">
+      <button id="obtenerTimestampBtn" class="secondary-bg text-white py-2 px-4 rounded-lg w-full">
+        Obtener Timestamp
+      </button>
+      <div id="timestamp" class="mt-4 text-secondary"></div>
+    </div>
+
+  </div>
+
+  <script>
+    let provider;
+    let signer;
+    let contract;
+
+    const contractAddress = 0x7786A1f0BF2e0f1c20214B2E055138efC658020E; // Coloca aquí la dirección de tu contrato desplegado
+    const contractABI = [
+	{
+		"inputs": [],
+		"name": "latestAnswer",
+		"outputs": [
+			{
+				"internalType": "int256",
+				"name": "",
+				"type": "int256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "latestTimestamp",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+
+    // Conectar a MetaMask
+    document.getElementById('conectarBtn').addEventListener('click', async () => {
+      const statusMessage = document.getElementById('statusMessage');
+      statusMessage.textContent = ''; // Limpiar mensaje de estado previo
+
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          await ethereum.request({ method: 'eth_requestAccounts' });
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          const account = await signer.getAddress();
+          document.getElementById('accountSpan').innerText = `Conectado: ${account}`;
+          contract = new ethers.Contract(contractAddress, contractABI, signer);
+          statusMessage.textContent = '¡Conexión exitosa con MetaMask!';
+          statusMessage.style.color = 'green';
+        } catch (error) {
+          console.error("Error al conectar MetaMask", error);
+          statusMessage.textContent = 'Error al conectar MetaMask. Verifica tu conexión.';
+          statusMessage.style.color = 'red';
+        }
+      } else {
+        alert('MetaMask no está instalado.');
+        statusMessage.textContent = 'MetaMask no está instalado.';
+        statusMessage.style.color = 'red';
+      }
+    });
+
+    // Obtener Precio BTC/USD
+    document.getElementById('obtenerPrecioBtn').addEventListener('click', async () => {
+      const statusMessage = document.getElementById('statusMessage');
+      const precioBTC = document.getElementById('precioBTC');
+      
+      if (contract) {
+        try {
+          const precio = await contract.obtenerPrecio();
+          precioBTC.innerText = `Precio BTC/USD: ${precio.toString()}`;
+          statusMessage.textContent = 'Precio obtenido correctamente.';
+          statusMessage.style.color = 'green';
+        } catch (error) {
+          console.error("Error al obtener el precio", error);
+          statusMessage.textContent = 'Error al obtener el precio. Intenta nuevamente.';
+          statusMessage.style.color = 'red';
+        }
+      } else {
+        alert('Conecte MetaMask primero.');
+      }
+    });
+
+    // Obtener Timestamp del último precio registrado
+    document.getElementById('obtenerTimestampBtn').addEventListener('click', async () => {
+      const statusMessage = document.getElementById('statusMessage');
+      const timestampDiv = document.getElementById('timestamp');
+      
+      if (contract) {
+        try {
+          const timestamp = await contract.obtenerTimestamp();
+          const date = new Date(timestamp * 1000);
+          timestampDiv.innerText = `Última actualización: ${date.toUTCString()}`;
+          statusMessage.textContent = 'Timestamp obtenido correctamente.';
+          statusMessage.style.color = 'green';
+        } catch (error) {
+          console.error("Error al obtener el timestamp", error);
+          statusMessage.textContent = 'Error al obtener el timestamp. Intenta nuevamente.';
+          statusMessage.style.color = 'red';
+        }
+      } else {
+        alert('Conecte MetaMask primero.');
+      }
+    });
+
+  </script>
 </body>
 </html>
