@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate Marketplace</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+
+    <div class="container mx-auto p-4">
+        <h1 class="text-4xl font-bold text-center mb-8">Real Estate Marketplace</h1>
+        
+        <div class="text-center mb-8">
+            <button id="connectWalletButton" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Connect MetaMask Wallet
+            </button>
+            <p id="walletAddress" class="text-green-500 mt-4"></p>
+        </div>
+
+        <div id="marketplace" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+            <!-- House 1 -->
+            <div class="border border-gray-700 rounded-lg p-4">
+                <img src="house1.jpg" alt="House 1" class="w-full h-64 object-cover rounded-lg mb-4">
+                <h2 class="text-2xl mb-2">House 1</h2>
+                <input type="number" id="assetId1" placeholder="Enter Asset ID" class="bg-gray-800 text-white p-2 rounded mb-2 w-full">
+                <input type="text" id="newOwner1" placeholder="Enter New Owner Address" class="bg-gray-800 text-white p-2 rounded mb-2 w-full">
+                <button onclick="registerAsset(1)" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2">Register Asset ID</button>
+                <button onclick="transferAsset(1)" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2">Transfer Asset</button>
+                <button onclick="checkOwner(1)" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded mt-2">Check Asset Owner</button>
+                <button onclick="getContractOwner()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-2">Get Contract Owner</button>
+            </div>
+
+            <!-- House 2 -->
+            <div class="border border-gray-700 rounded-lg p-4">
+                <img src="house2.jpg" alt="House 2" class="w-full h-64 object-cover rounded-lg mb-4">
+                <h2 class="text-2xl mb-2">House 2</h2>
+                <input type="number" id="assetId2" placeholder="Enter Asset ID" class="bg-gray-800 text-white p-2 rounded mb-2 w-full">
+                <input type="text" id="newOwner2" placeholder="Enter New Owner Address" class="bg-gray-800 text-white p-2 rounded mb-2 w-full">
+                <button onclick="registerAsset(2)" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2">Register Asset ID</button>
+                <button onclick="transferAsset(2)" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2">Transfer Asset</button>
+                <button onclick="checkOwner(2)" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded mt-2">Check Asset Owner</button>
+                <button onclick="getContractOwner()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-2">Get Contract Owner</button>
+            </div>
+
+            <!-- House 3 -->
+            <div class="border border-gray-700 rounded-lg p-4">
+                <img src="house3.jpg" alt="House 3" class="w-full h-64 object-cover rounded-lg mb-4">
+                <h2 class="text-2xl mb-2">House 3</h2>
+                <input type="number" id="assetId3" placeholder="Enter Asset ID" class="bg-gray-800 text-white p-2 rounded mb-2 w-full">
+                <input type="text" id="newOwner3" placeholder="Enter New Owner Address" class="bg-gray-800 text-white p-2 rounded mb-2 w-full">
+                <button onclick="registerAsset(3)" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2">Register Asset ID</button>
+                <button onclick="transferAsset(3)" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2">Transfer Asset</button>
+                <button onclick="checkOwner(3)" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded mt-2">Check Asset Owner</button>
+                <button onclick="getContractOwner()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-2">Get Contract Owner</button>
+            </div>
+
+            <!-- House 4 -->
+            <div class="border border-gray-700 rounded-lg p-4">
+                <img src="house4.jpg" alt="House 4" class="w-full h-64 object-cover rounded-lg mb-4">
+                <h2 class="text-2xl mb-2">House 4</h2>
+                <input type="number" id="assetId4" placeholder="Enter Asset ID" class="bg-gray-800 text-white p-2 rounded mb-2 w-full">
+                <input type="text" id="newOwner4" placeholder="Enter New Owner Address" class="bg-gray-800 text-white p-2 rounded mb-2 w-full">
+                <button onclick="registerAsset(4)" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2">Register Asset ID</button>
+                <button onclick="transferAsset(4)" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2">Transfer Asset</button>
+                <button onclick="checkOwner(4)" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded mt-2">Check Asset Owner</button>
+                <button onclick="getContractOwner()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-2">Get Contract Owner</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let provider;
+        let signer;
+        let contract;
+
+        const contractAddress = 0x3206818F73834f194d873e3Da85DC78ae4208892; // Reemplaza con la dirección de tu contrato
+        const contractABI = [
+	    {
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	    },
+	    {
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "Act_Owner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	    },
+	    {
+		"inputs": [],
+		"name": "Propietario_contrato",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	    },
+	    {
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "Id_Activo",
+				"type": "uint256"
+			}
+		],
+		"name": "Revisar",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	    },
+	    {
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "Id_Activo",
+				"type": "uint256"
+			}
+		],
+		"name": "reg_Activo",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "Id_Activo",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "trans_Activo",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
+];
+
+        // Conectar a la billetera MetaMask
+        async function connectWallet() {
+            if (window.ethereum) {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                contract = new ethers.Contract(contractAddress, contractABI, signer);
+                const walletAddress = await signer.getAddress();
+                document.getElementById("connectWalletButton").innerText = "Wallet Connected";
+                document.getElementById("walletAddress").innerText = `Connected wallet: ${walletAddress}`;
+            } else {
+                alert("MetaMask no detectado. Por favor, instala MetaMask.");
+            }
+        }
+
+        document.getElementById("connectWalletButton").addEventListener("click", connectWallet);
+
+        // Validación de la dirección de Ethereum
+        function isValidAddress(address) {
+            try {
+                return ethers.utils.getAddress(address);
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // Registrar un ID de activo
+        async function registerAsset(houseNumber) {
+            try {
+                const assetId = parseInt(document.getElementById(`assetId${houseNumber}`).value);
+                if (isNaN(assetId) || assetId <= 0) {
+                    alert("Por favor, ingrese un ID de activo válido.");
+                    return;
+                }
+                const tx = await contract.registro_Activo(assetId);
+                await tx.wait();
+                alert(`Activo ${assetId} registrado exitosamente!`);
+            } catch (error) {
+                console.error("Error al registrar el activo:", error);
+                alert("Error al registrar el activo");
+            }
+        }
+
+        // Transferir un activo a un nuevo propietario
+        async function transferAsset(houseNumber) {
+            try {
+                const assetId = parseInt(document.getElementById(`assetId${houseNumber}`).value);
+                const newOwner = document.getElementById(`newOwner${houseNumber}`).value;
+                
+                if (isNaN(assetId) || assetId <= 0) {
+                    alert("Por favor, ingrese un ID de activo válido.");
+                    return;
+                }
+                if (!isValidAddress(newOwner)) {
+                    alert("Por favor, ingrese una dirección de Ethereum válida.");
+                    return;
+                }
+
+                const tx = await contract.transferencia_Activo(assetId, newOwner);
+                await tx.wait();
+                alert(`Activo ${assetId} transferido exitosamente a ${newOwner}!`);
+            } catch (error) {
+                console.error("Error al transferir el activo:", error);
+                alert("Error al transferir el activo");
+            }
+        }
+
+        // Revisar el propietario de un activo
+        async function checkOwner(houseNumber) {
+            try {
+                const assetId = parseInt(document.getElementById(`assetId${houseNumber}`).value);
+                if (isNaN(assetId) || assetId <= 0) {
+                    alert("Por favor, ingrese un ID de activo válido.");
+                    return;
+                }
+                const owner = await contract.Revisar_Propietario(assetId);
+                alert(`Propietario del activo ${assetId}: ${owner}`);
+            } catch (error) {
+                console.error("Error al revisar el propietario del activo:", error);
+                alert("Error al revisar el propietario del activo");
+            }
+        }
+
+        // Obtener el propietario del contrato
+        async function getContractOwner() {
+            try {
+                const owner = await contract.Propietario_contrato();
+                alert(`Propietario del contrato: ${owner}`);
+            } catch (error) {
+                console.error("Error al obtener el propietario del contrato:", error);
+                alert("Error al obtener el propietario del contrato");
+            }
+        }
+    </script>
+</body>
+</html>

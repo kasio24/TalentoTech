@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interfaz de Contrato Inteligente</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        input[type="number"],
+        input[type="text"],
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #accountAddress {
+            margin-bottom: 16px;
+            font-weight: bold;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Interfaz de Contrato</h1>
+
+        <div id="accountAddress">Conecta tu billetera para ver tu dirección</div>
+
+        <h2>Registrar Activo</h2>
+        <label for="assetIdRegister">ID del Activo:</label>
+        <input type="number" id="assetIdRegister">
+        <button onclick="registerAsset()">Registrar Activo</button>
+        <div id="registerStatus"></div>
+
+        <h2>Transferir Activo</h2>
+        <label for="assetIdTransfer">ID del Activo:</label>
+        <input type="number" id="assetIdTransfer">
+        <label for="newOwnerAddress">Nueva dirección del propietario:</label>
+        <input type="text" id="newOwnerAddress">
+        <button onclick="transferAsset()">Transferir Activo</button>
+        <div id="transferStatus"></div>
+
+        <h2>Revisar propietario</h2>
+        <label for="assetIdCheck">ID del Activo:</label>
+        <input type="number" id="assetIdCheck">
+        <button onclick="checkOwner()">Revisar Propietario</button>
+        <div id="ownerInfo"></div>
+
+        <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+        <script>
+            const contractAddress = 0x3206818F73834f194d873e3Da85DC78ae4208892; 
+            const contractABI = [
+	    {
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	    },
+	    {
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "Act_Owner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	    },
+	    {
+		"inputs": [],
+		"name": "Propietario_contrato",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	    },
+	    {
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "Id_Activo",
+				"type": "uint256"
+			}
+		],
+		"name": "Revisar",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	    },
+	    {
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "Id_Activo",
+				"type": "uint256"
+			}
+		],
+		"name": "reg_Activo",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "Id_Activo",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "trans_Activo",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
+];
+
+            let provider;
+            let signer;
+            let myContract;
+
+            async function connectWallet() {
+                if (window.ethereum) {
+                    try {
+                        await window.ethereum.request({ method: 'eth_requestAccounts' });
+                        provider = new ethers.providers.Web3Provider(window.ethereum);
+                        signer = provider.getSigner();
+                        myContract = new ethers.Contract(contractAddress, contractABI, signer);
+
+                        const accountAddress = await signer.getAddress();
+                        document.getElementById('accountAddress').innerText = `Tu dirección: ${accountAddress}`;
+                    } catch (error) {
+                        console.error("Error al conectar la billetera:", error);
+                        alert("Error al conectar la billetera. Por favor, asegúrate de que MetaMask esté instalado y desbloqueado.");
+                    }
+                } else {
+                    alert("MetaMask no está instalado. Por favor, instala MetaMask para usar esta aplicación.");
+                }
+            }
+
+            async function registerAsset() {
+                const assetId = document.getElementById('assetIdRegister').value;
+                if (!assetId) {
+                    document.getElementById('registerStatus').innerText = 'Por favor, ingrese un ID de activo válido.';
+                    return;
+                }
+
+                try {
+                    const ownerAddress = await myContract.Propietario_contrato();
+                    const accountAddress = await signer.getAddress();
+
+                    if (accountAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+                        document.getElementById('registerStatus').innerText = 'Solo el propietario del contrato puede registrar activos.';
+                        return;
+                    }
+
+                    const tx = await myContract.reg_Activo(ethers.BigNumber.from(assetId));
+                    await tx.wait();
+                    document.getElementById('registerStatus').innerText = `Activo ${assetId} registrado correctamente.`;
+                } catch (error) {
+                    console.error("Error al registrar el activo:", error);
+                    document.getElementById('registerStatus').innerText = `Error al registrar el activo: ${error.message}`;
+                }
+            }
+
+            async function transferAsset() {
+                const assetId = document.getElementById('assetIdTransfer').value;
+                const newOwner = document.getElementById('newOwnerAddress').value;
+                if (!assetId || !newOwner) {
+                    document.getElementById('transferStatus').innerText = 'Por favor, complete todos los campos.';
+                    return;
+                }
+                try {
+                    const tx = await myContract.trans_Activo(ethers.BigNumber.from(assetId), newOwner);
+                    await tx.wait();
+                    document.getElementById('transferStatus').innerText = `Activo ${assetId} transferido a ${newOwner}.`;
+                } catch (error) {
+                    console.error("Error al transferir el activo:", error);
+                    document.getElementById('transferStatus').innerText = `Error al transferir el activo: ${error.message}`;
+                }
+            }
+
+            async function checkOwner() {
+                const assetId = document.getElementById('assetIdCheck').value;
+                if (!assetId) {
+                    document.getElementById('ownerInfo').innerText = 'Por favor, ingrese un ID de activo válido.';
+                    return;
+                }
+                try {
+                    const ownerAddress = await myContract.Revisar(ethers.BigNumber.from(assetId));
+                    document.getElementById('ownerInfo').innerText = `El propietario del activo ${assetId} es: ${ownerAddress}`;
+                } catch (error) {
+                    console.error("Error al obtener la información del propietario:", error);
+                    document.getElementById('ownerInfo').innerText = `Error al obtener la información del propietario: ${error.message}`;
+                }
+            }
+
+            connectWallet();
+        </script>
+    </div>
+</body>
+</html>
